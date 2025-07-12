@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { deleteDoctor } from './CommonUrl';
+import { deleteDoctor } from './Common Url';
 
 const DeleteDoctor = () => {
   const { id } = useParams();

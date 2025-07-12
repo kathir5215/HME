@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { deleteAppointment } from './CommonUrl';
+import { deleteAppointment } from './Common Url';
 
 const DeleteAppointment = () => {
   const { id } = useParams();

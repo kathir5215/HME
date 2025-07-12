@@ -1,128 +1,121 @@
 import React, { useState, useEffect } from 'react';
-import { createAppointment, listDoctors, listPatients } from './CommonUrl';
+import { createAppointments, listDoctors, listPatients } from './Common Url';
 import { useNavigate } from 'react-router-dom';
 
 const AddAppointmentComponent = () => {
   const navigate = useNavigate();
+
   const [appointment, setAppointment] = useState({
     appointmentTime: '',
     doctorId: '',
-    patientId: '',
+    patientId: ''
   });
+
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [errors, setErrors] = useState({});
-  const [availabilityError, setAvailabilityError] = useState('');
 
   useEffect(() => {
     listDoctors()
-      .then(res => { 
-          setDoctors(res.data.filter(doc => doc.available === 'Yes'))
-      })
-      .catch(() => setDoctors([]));
+      .then(response => setDoctors(response.data))
+      .catch(error => console.error("Error fetching doctors", error));
 
     listPatients()
-      .then(res => setPatients(res.data))
-      .catch(() => setPatients([]));
+      .then(response => setPatients(response.data))
+      .catch(error => console.error("Error fetching patients", error));
   }, []);
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setAppointment(prev => ({ ...prev, [name]: value }));
-    setAvailabilityError('');
+    setAppointment(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const validate = () => {
-    let tempErrors = {};
+    const tempErrors = {};
     if (!appointment.appointmentTime.trim()) tempErrors.appointmentTime = "Appointment time is required";
-    if (!appointment.doctorId) tempErrors.doctorId = "Doctor must be selected";
-    if (!appointment.patientId) tempErrors.patientId = "Patient must be selected";
+    if (!appointment.doctorId) tempErrors.doctorId = "Doctor is required";
+    if (!appointment.patientId) tempErrors.patientId = "Patient is required";
+
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const saveAppointment = (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (validate()) {
+      const payload = {
+        appointmentTime: appointment.appointmentTime,
+        doctorId: Number(appointment.doctorId),
+        patientId: Number(appointment.patientId)
+      };
+      
 
-    const selectedDoctor = doctors.find(doc => doc.id == appointment.doctorId);
-    if (!selectedDoctor || selectedDoctor.available !== 'Yes') {
-      setAvailabilityError('Selected doctor is not available');
-      return;
+      createAppointments(payload)
+        .then(() => {
+          navigate('/appointments');
+        })
+        .catch(error => {
+          console.error('Error saving appointment', error);
+        });
     }
-
-    createAppointment(appointment)
-      .then(() => navigate('/appointments'))
-      .catch(err => {
-        console.error("Failed to create appointment", err);
-        if (err.response?.data?.includes("not available")) {
-          setAvailabilityError(err.response.data);
-        } else {
-          setErrors({ submit: "Failed to create appointment. Try again." });
-        }
-      });
   };
 
+
   return (
-    <div className="container">
-      <h2>Add Appointment</h2>
-      {errors.submit && <div className="alert alert-danger">{errors.submit}</div>}
-      {availabilityError && <div className="alert alert-warning">{availabilityError}</div>}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <label>Appointment Time</label>
-          <input
-            type="datetime-local"
-            name="appointmentTime"
-            value={appointment.appointmentTime}
-            onChange={handleChange}
-            className={`form-control ${errors.appointmentTime ? 'is-invalid' : ''}`}
-          />
-          {errors.appointmentTime && <div className="invalid-feedback">{errors.appointmentTime}</div>}
-        </div>
-        <div className="mb-3">
-          <label>Doctor</label>
-          <select
-            name="doctorId"
-            value={appointment.doctorId}
-            onChange={handleChange}
-            className={`form-select ${errors.doctorId ? 'is-invalid' : ''}`}
-          >
-            <option value="">Select Doctor</option>
-            {doctors
-              .filter(doctor => doctor.available === 'Yes')
-              .map(doc => (
-                <option key={doc.id} value={doc.id}>
-                  {doc.name} (Available)
-                </option>
-              ))}
-            {doctors
-              .filter(doctor => doctor.available !== 'Yes')
-              .map(doc => (
-                <option key={doc.id} value={doc.id} disabled>
-                  {doc.name} (Not Available)
-                </option>
-              ))}
-          </select>
-          {errors.doctorId && <div className="invalid-feedback">{errors.doctorId}</div>}
+    <div className='container'>
+      <div className='row'>
+        <div className='card col-md-6 offset-md-3 offset-md-3'>
+          <h2 className='text-center'>Add Appointment</h2>
+          <div className='card-body'>
+            <form onSubmit={saveAppointment}>
+              <div className='form-group'>
+                <label className='form-label'>Appointment Time:</label>
+                <input
+                  type='datetime-local'
+                  name='appointmentTime'
+                  value={appointment.appointmentTime}
+                  onChange={handleInputChange}
+                  className={`form-control ${errors.appointmentTime ? 'is-invalid' : ''}`}
+                />
+                {errors.appointmentTime && <div className='text-danger'>{errors.appointmentTime}</div>}
+
+                <label className='form-label mt-3'>Doctor:</label>
+                <select
+                  name='doctorId'
+                  value={appointment.doctorId}
+                  onChange={handleInputChange}
+                  className={`form-control ${errors.doctorId ? 'is-invalid' : ''}`}
+                >
+                  <option value=''>Select Doctor</option>
+                  {doctors.map(doc => (
+                    <option key={doc.id} value={doc.id}>{doc.name}</option>
+                  ))}
+                </select>
+                {errors.doctorId && <div className='text-danger'>{errors.doctorId}</div>}
+
+                <label className='form-label mt-3'>Patient:</label>
+                <select
+                  name='patientId'
+                  value={appointment.patientId}
+                  onChange={handleInputChange}
+                  className={`form-control ${errors.patientId ? 'is-invalid' : ''}`}
+                >
+                  <option value=''>Select Patient</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+                  ))}
+                </select>
+                {errors.patientId && <div className='text-danger'>{errors.patientId}</div>}
+              </div>
+
+              <button type='submit' className='btn btn-success mt-3'>Submit</button>
+            </form>
           </div>
-          <div className="mb-3">
-          <label>Patient</label>
-          <select
-            name="patientId"
-            value={appointment.patientId}
-            onChange={handleChange}
-            className={`form-select ${errors.patientId ? 'is-invalid' : ''}`}
-          >
-            <option value="">Select Patient</option>
-            {patients.map(pat => (
-              <option key={pat.id} value={pat.id}>{pat.firstName} {pat.lastName}</option>
-            ))}
-          </select>
-          {errors.patientId && <div className="invalid-feedback">{errors.patientId}</div>}
         </div>
-        <button type="submit" className="btn btn-success">Add Appointment</button>
-      </form>
+      </div>
     </div>
   );
 };
